@@ -2,6 +2,8 @@
 #define		_PROJECT_TIME_WALK_LOG_HPP_
 
 #include <iostream>
+#include <chrono>
+#include <ctime>
 #include <mutex>
 
 class Log
@@ -12,7 +14,14 @@ class Log
 		return mutex;
 	}
 
-	std::mutex & _mutex = create_mutex();
+	static const std::size_t new_id(void)
+	{
+		static std::size_t id = 0;
+		return id++;
+	}
+
+	std::mutex &		_mutex	= create_mutex();
+	const std::size_t	_id		= new_id();
 
 public:
 
@@ -21,6 +30,13 @@ public:
 	void operator() (Types_ ... data)
 	{
 		std::lock_guard<std::mutex> lock{ Log::_mutex };
+		std::time_t timestamp = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+		std::cout 
+			// ID
+			<< "[" << Log::_id << "] - "
+			// Time stamp (prints newline)
+			<< std::ctime(&timestamp)
+			<< "\t";
 		print(data...);
 	}
 
@@ -28,7 +44,7 @@ private:
 
 	void print(void)
 	{
-		std::cout << "\n";
+		std::cout << "\n\n";
 	}
 
 	template <typename First_, typename... Trail_>
