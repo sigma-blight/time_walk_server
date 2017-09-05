@@ -42,6 +42,7 @@ static constexpr const char ROOT_DIR[] = "../../archives/time_walk/";
 static constexpr const char MAIN_PHOTO_NAME[] = "main_photo";
 static constexpr const char GPS_NAME[] = "gps";
 static constexpr const char TEXT_NAME[] = "text";
+static constexpr const char IMAGE_NAME[] = "image";
 static constexpr const char SEPERATOR = ' ';
 
 class Request
@@ -219,7 +220,7 @@ private:
 			break;
 		}
 
-		if (!exists(path) && !is_regular_file(path))
+		if (!exists(path) || !is_regular_file(path))
 		{
 			process.is_invalid = true;
 			process.data = "invalid file";
@@ -228,8 +229,6 @@ private:
 		}
 
 		std::ifstream file{ path.string() };
-		file.seekg(0, file.beg);
-
 		std::string line;
 		process.data = "";
 		while (std::getline(file, line))
@@ -240,7 +239,44 @@ private:
 
 	void transfer_process(RequestCode code, std::istringstream & stream, Process & process)
 	{
+		using namespace boost::filesystem;
 		Request::_log("Processing transfer command");
+
+		path path{ ROOT_DIR };
+
+		switch (code)
+		{
+		case RequestCode::TRANSFER_MAIN_REGION:
+			if (!stream_gob(path, process, stream, 1,
+				"command requires <region> argument"))
+				return;
+			path.append(MAIN_PHOTO_NAME);
+			break;
+		case RequestCode::TRANSFER_MAIN_LANDMARK:
+			if (!stream_gob(path, process, stream, 2,
+				"command requires <region> and <landmark> arguments"))
+				return;
+			path.append(MAIN_PHOTO_NAME);
+			break;
+		case RequestCode::TRANSFER_IMAGE:
+			if (!stream_gob(path, process, stream, 3,
+				"command requires <region>, <landmark> and <image_name> arguments"))
+				return;
+			path.append(IMAGE_NAME);
+			break;
+		}
+
+		if (!exists(path) || !is_regular_file(path))
+		{
+			process.is_invalid = true;
+			process.data = "invalid file";
+			process.transfer_code = TransferCode::INVALID_FILE;
+			return;
+		}
+		
+		process.is_file = true;
+		process.data = path.string();
+		process.transfer_code = TransferCode::IMAGE;
 	}
 };
 

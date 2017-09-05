@@ -5,8 +5,10 @@
 #include "request.hpp"
 
 #include <memory>
+#include <vector>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <boost/asio.hpp>
 
 class Connection : public std::enable_shared_from_this<Connection>
@@ -15,7 +17,8 @@ class Connection : public std::enable_shared_from_this<Connection>
 	using socket_t = boost::asio::ip::tcp::socket;
 	using stream_buf_t = boost::asio::streambuf;
 
-	static constexpr const char READ_UNTIL = ';';
+	static constexpr const char			READ_UNTIL = ';';
+	static constexpr const std::size_t	CHUNK_SIZE = 10240; // 10KB
 
 	io_service_t &	_io_service;
 	socket_t		_socket;
@@ -100,7 +103,14 @@ private:
 		else if (process.is_file)
 		{
 			Connection::_log("Sending file - ", process.data);
-			// file transfer
+			
+			std::ifstream file;
+			file.open(process.data, std::ios::binary | std::ios::ate);
+			start_write(file.tellg()); // write file size
+			file.close();
+			// start writing
+			auto self = shared_from_this();
+			self->start_file_write(std::make_shared<std::ifstream>(process.data, std::ios::binary));
 		}
 
 		// start another read after processing request
@@ -110,14 +120,13 @@ private:
 	void start_write(std::size_t code)
 	{
 		auto self = shared_from_this();
-		boost::asio::async_write(self->socket(),
+		boost::system::error_code error;
+		boost::asio::write(self->socket(),
 			boost::asio::buffer(*std::make_shared<std::string>(std::to_string(code) + "\n")),
-			boost::asio::transfer_all(),
-			[self, code](boost::system::error_code error, std::size_t bytes)
-		{
-			if (error)
-				self->_log("Fatal Write - ", error.message());
-		});
+			error);
+
+		if (error)
+			self->_log("Fatal Write - ", error.message());
 	}
 
 	// pass by value to avoid thread issues
@@ -134,6 +143,32 @@ private:
 				self->_log("Fatal Write - ", error.message());
 			else
 				self->_log("Wrote ", bytes, " bytes");
+		});
+	}
+
+	void start_file_write(std::shared_ptr<std::ifstream> file,
+		boost::system::error_code error = boost::system::error_code{},
+		std::size_t bytes = 0, std::size_t total_bytes = 0)
+	{
+		total_bytes += bytes;
+
+		if (error)
+			return Connection::_log("Fatal write from file transfer - ", error.message());
+		if (file->eof())
+			return Connection::_log("File transfer complete of ", total_bytes, " bytes");
+
+		Connection::_log("Transfered ", total_bytes, " so far");
+
+		std::vector<char> data(CHUNK_SIZE);
+		file->read(&data[0], CHUNK_SIZE);
+
+		auto self = shared_from_this();
+		boost::asio::async_write(self->socket(),
+			boost::asio::buffer(*std::make_shared<std::vector<char>>(data)),
+			boost::asio::transfer_all(),
+			[self, file, total_bytes](boost::system::error_code error, std::size_t bytes)
+		{
+			self->start_file_write(file, error, bytes, total_bytes);
 		});
 	}
 
