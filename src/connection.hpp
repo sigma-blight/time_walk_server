@@ -69,25 +69,37 @@ private:
 		std::string read_data;
 		std::istream stream{ &(Connection::_read_buffer) };
 		std::getline(stream, read_data);
+
+		// delete the READ_UNTIL character
+		auto pos = read_data.find_last_of(READ_UNTIL);
+		if (pos != std::string::npos) read_data.erase(pos);
 		
 		
 		auto process = Connection::_request.process(read_data);
 
 		// informs client if transfer is successful and file or text
-		Connection::start_write(std::to_string(
-			static_cast<std::size_t>(process.transfer_code)));
+		std::size_t code = static_cast<std::size_t>(process.transfer_code);
+		Connection::_log("TransferCode - ", code);
+		Connection::start_write(std::to_string(code));
 
 		// write related error message to client
 		if (process.is_invalid)
+		{
+			Connection::_log("Invalid request - ", process.data);
 			Connection::start_write(process.data); // data -> error message
+		}
 
 		// write simple text line to client
 		else if (process.is_text)
+		{
+			Connection::_log("Sending text - ", process.data);
 			Connection::start_write(process.data); // data -> text to send
+		}
 
 		// transfer file to client
 		else if (process.is_file)
 		{
+			Connection::_log("Sending file - ", process.data);
 			// file transfer
 		}
 
@@ -98,7 +110,18 @@ private:
 	// pass by value to avoid thread issues
 	void start_write(std::string data)
 	{
-
+		data.push_back('\n');
+		auto self = shared_from_this();
+		boost::asio::async_write(self->socket(),
+			boost::asio::buffer(*std::make_shared<std::string>(data)),
+			boost::asio::transfer_all(),
+			[self](boost::system::error_code error, std::size_t bytes)
+		{
+			if (error)
+				self->_log("Fatal Write - ", error.message());
+			else
+				self->_log("Wrote ", bytes, " bytes");
+		});
 	}
 
 	void disconnect(void)
