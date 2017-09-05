@@ -119,70 +119,47 @@ private:
 		Request::_log("Processing list command");		
 
 		path path{ ROOT_DIR };
-		std::string dir;
+
+		auto stream_gob = [&path, &process, &stream](std::size_t args, 
+			const std::string & arg_fault = "invalid arguments")
+			-> bool
+		{
+			for (std::size_t i = 0; i != args; ++i)
+			{
+				if (stream.eof())
+				{
+					process.is_invalid = true;
+					process.data = arg_fault;
+					process.transfer_code = TransferCode::INVALID_REQUEST;
+					return false;
+				}
+
+				std::string dir;
+				stream >> dir;
+				if (stream.fail())
+				{
+					process.is_invalid = true;
+					process.data = "invalid request";
+					process.transfer_code = TransferCode::INVALID_REQUEST;
+					return false;
+				}
+
+				path.append(dir);
+			}
+			return true;
+		};
 
 		switch (code)
-		{
-			// root is regions dir
-		case RequestCode::LIST_REGIONS: break;
+		{			
+		case RequestCode::LIST_REGIONS: break; // root is regions dir
 		case RequestCode::LIST_LANDMARKS:
-			if (stream.eof())
-			{
-				process.is_invalid = true;
-				process.data = "command requires <region> argument";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
+			if (!stream_gob(1, "command requires <region> argument"))
 				return;
-			}
-
-			stream >> dir;
-			if (stream.fail())
-			{
-				process.is_invalid = true;
-				process.data = "invalid request";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
-				return;
-			}
-
-			path.append(dir);
 			break;
 
 		case RequestCode::LIST_IMAGES:
-			if (stream.eof())
-			{
-				process.is_invalid = true;
-				process.data = "command requiest <region> and <landmark> arguments";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
+			if (!stream_gob(2, "command requiest <region> and <landmark> arguments"))
 				return;
-			}
-
-			stream >> dir;
-			if (stream.fail())
-			{
-				process.is_invalid = true;
-				process.data = "invalid request";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
-				return;
-			}
-			path.append(dir);
-
-			if (stream.eof())
-			{
-				process.is_invalid = true;
-				process.data = "command requiest <region> and <landmark> arguments";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
-				return;
-			}
-
-			dir.clear();
-			stream >> dir;
-			if (stream.fail())
-			{
-				process.is_invalid = true;
-				process.data = "invalid request";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
-				return;
-			}
-			path.append(dir);
 			break;
 		}
 
@@ -202,7 +179,10 @@ private:
 				process.data += item.path().filename().string() + SEPERATOR;
 
 		if (process.data.empty())
+		{
+			Request::_log("Empty directory");
 			process.transfer_code = TransferCode::EMPTY_DIRECTORY;
+		}
 		else
 		{
 			process.is_text = true;
