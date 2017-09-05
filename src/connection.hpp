@@ -80,7 +80,7 @@ private:
 		// informs client if transfer is successful and file or text
 		std::size_t code = static_cast<std::size_t>(process.transfer_code);
 		Connection::_log("TransferCode - ", code);
-		Connection::start_write(std::to_string(code));
+		Connection::start_write(code);
 
 		// write related error message to client
 		if (process.is_invalid)
@@ -107,11 +107,24 @@ private:
 		Connection::start_read();
 	}
 
+	void start_write(std::size_t code)
+	{
+		auto self = shared_from_this();
+		boost::asio::async_write(self->socket(),
+			boost::asio::buffer(*std::make_shared<std::string>(std::to_string(code) + "\n")),
+			boost::asio::transfer_all(),
+			[self, code](boost::system::error_code error, std::size_t bytes)
+		{
+			if (error)
+				self->_log("Fatal Write - ", error.message());
+		});
+	}
+
 	// pass by value to avoid thread issues
 	void start_write(std::string data)
 	{
-		data.push_back('\n');
 		auto self = shared_from_this();
+		data.push_back('\n');
 		boost::asio::async_write(self->socket(),
 			boost::asio::buffer(*std::make_shared<std::string>(data)),
 			boost::asio::transfer_all(),

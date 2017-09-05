@@ -4,6 +4,7 @@
 #include "log.hpp"
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <boost/filesystem.hpp>
 
 enum class TransferCode
@@ -40,6 +41,7 @@ struct Process
 static constexpr const char ROOT_DIR[] = "../../archives/time_walk/";
 static constexpr const char MAIN_PHOTO_NAME[] = "main_photo";
 static constexpr const char GPS_NAME[] = "gps";
+static constexpr const char TEXT_NAME[] = "text";
 static constexpr const char SEPERATOR = ' ';
 
 class Request
@@ -113,6 +115,37 @@ public:
 
 private:
 
+	bool stream_gob(boost::filesystem::path & path, Process & process,
+		std::istringstream & stream, std::size_t args, 
+		const std::string & arg_fault = "invalid arguments")
+	{
+		using namespace boost::filesystem;
+
+		for (std::size_t i = 0; i != args; ++i)
+		{
+			if (stream.eof())
+			{
+				process.is_invalid = true;
+				process.data = arg_fault;
+				process.transfer_code = TransferCode::INVALID_REQUEST;
+				return false;
+			}
+
+			std::string dir;
+			stream >> dir;
+			if (stream.fail())
+			{
+				process.is_invalid = true;
+				process.data = "invalid request";
+				process.transfer_code = TransferCode::INVALID_REQUEST;
+				return false;
+			}
+
+			path.append(dir);
+		}
+		return true;
+	}
+
 	void list_process(RequestCode code, std::istringstream & stream, Process & process)
 	{
 		using namespace boost::filesystem;
@@ -120,52 +153,25 @@ private:
 
 		path path{ ROOT_DIR };
 
-		auto stream_gob = [&path, &process, &stream](std::size_t args, 
-			const std::string & arg_fault = "invalid arguments")
-			-> bool
-		{
-			for (std::size_t i = 0; i != args; ++i)
-			{
-				if (stream.eof())
-				{
-					process.is_invalid = true;
-					process.data = arg_fault;
-					process.transfer_code = TransferCode::INVALID_REQUEST;
-					return false;
-				}
-
-				std::string dir;
-				stream >> dir;
-				if (stream.fail())
-				{
-					process.is_invalid = true;
-					process.data = "invalid request";
-					process.transfer_code = TransferCode::INVALID_REQUEST;
-					return false;
-				}
-
-				path.append(dir);
-			}
-			return true;
-		};
-
 		switch (code)
 		{			
 		case RequestCode::LIST_REGIONS: break; // root is regions dir
 		case RequestCode::LIST_LANDMARKS:
-			if (!stream_gob(1, "command requires <region> argument"))
+			if (!stream_gob(path, process, stream, 1, 
+				"command requires <region> argument"))
 				return;
 			break;
 
 		case RequestCode::LIST_IMAGES:
-			if (!stream_gob(2, "command requiest <region> and <landmark> arguments"))
+			if (!stream_gob(path, process, stream, 2, 
+				"command requiest <region> and <landmark> arguments"))
 				return;
 			break;
 		}
 
 		Request::_log("Getting contents of - ", path.string());
 
-		if (!exists(path))
+		if (!exists(path) || !is_directory(path))
 		{
 			process.is_invalid = true;
 			process.data = "invalid directory";
@@ -192,7 +198,44 @@ private:
 
 	void get_process(RequestCode code, std::istringstream & stream, Process & process)
 	{
+		using namespace boost::filesystem;
 		Request::_log("Processing get command");
+
+		path path{ ROOT_DIR };
+
+		switch (code)
+		{
+		case RequestCode::GET_GPS:
+			if (!stream_gob(path, process, stream, 2, 
+				"command requiest <region> and <landmark> arguments"))
+				return;
+			path.append(GPS_NAME);
+			break;
+		case RequestCode::GET_TEXT:
+			if (!stream_gob(path, process, stream, 3, 
+				"command requiest <region>, <landmark> and <image_name> arguments"))
+				return;
+			path.append(TEXT_NAME);
+			break;
+		}
+
+		if (!exists(path) && !is_regular_file(path))
+		{
+			process.is_invalid = true;
+			process.data = "invalid file";
+			process.transfer_code = TransferCode::INVALID_FILE;
+			return;
+		}
+
+		std::ifstream file{ path.string() };
+		file.seekg(0, file.beg);
+
+		std::string line;
+		process.data = "";
+		while (std::getline(file, line))
+			process.data.append(line + "\n");
+		process.is_text = true;
+		process.transfer_code = TransferCode::TEXT;
 	}
 
 	void transfer_process(RequestCode code, std::istringstream & stream, Process & process)
