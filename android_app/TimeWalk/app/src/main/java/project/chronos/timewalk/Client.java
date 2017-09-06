@@ -29,7 +29,8 @@ public class Client {
         EMPTY_DIRECTORY(2),
         INVALID_REQUEST(10),
         INVALID_DIRECTORY(11),
-        INVALID_FILE(12)
+        INVALID_FILE(12),
+        EXCEPTION_FAIL(20)
         ;
 
         public final int code;
@@ -110,13 +111,12 @@ public class Client {
 
         @Override
         protected Data<ArrayList<String>> doInBackground(String... strings) {
-            if (strings.length == 0) return null;
+            Data<ArrayList<String>> data = new Data<>();
 
             _output.println(to_string(Request.LIST_LANDMARKS) + " " + strings[0] + ";");
 
             try {
                 Transfer code = to_code(_input.readLine());
-                Data<ArrayList<String>> data = new Data<>();
                 data.code = code;
 
                 if (code != Transfer.TEXT) {
@@ -128,13 +128,15 @@ public class Client {
                         data.result.add(land);
                 }
 
-                return data;
-
             } catch (Exception e) {
                 Log.e(CLIENT_LOG, "Landmarks Failed: " + e.getMessage());
+                data.result = null;
+                data.failed = true;
+                data.error_msg = e.getMessage();
+                data.code = Transfer.EXCEPTION_FAIL;
             }
 
-            return null;
+            return data;
         }
     }
 
