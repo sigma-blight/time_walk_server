@@ -113,8 +113,12 @@ private:
 			
 			std::ifstream file;
 			file.open(process.data, std::ios::binary | std::ios::ate);
-			start_write(file.tellg()); // write file size
+
+			// write file size
+			Connection::_log("Writing Size - ", file.tellg());
+			start_write(file.tellg()); 
 			file.close();
+
 			// start writing
 			auto self = shared_from_this();
 			self->start_file_write(std::make_shared<std::ifstream>(process.data, std::ios::binary));
@@ -166,12 +170,15 @@ private:
 
 		Connection::_log("Transfered ", total_bytes, " so far");
 
-		std::vector<char> data(CHUNK_SIZE);
-		file->read(&data[0], CHUNK_SIZE);
+		std::vector<std::uint8_t> data;
+		data.reserve(CHUNK_SIZE);
+		for (std::size_t i = 0; i != CHUNK_SIZE && !file->eof(); ++i) {
+			data.push_back(file->get());
+		}
 
 		auto self = shared_from_this();
 		boost::asio::async_write(self->socket(),
-			boost::asio::buffer(*std::make_shared<std::vector<char>>(data)),
+			boost::asio::buffer(*std::make_shared<std::vector<std::uint8_t>>(data.begin(), data.end())),
 			boost::asio::transfer_all(),
 			[self, file, total_bytes](boost::system::error_code error, std::size_t bytes)
 		{
