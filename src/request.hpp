@@ -181,7 +181,7 @@ private:
 		}
 
 		for (auto && item : directory_iterator(path))
-			if (item.path().filename().string() != MAIN_PHOTO_NAME ||
+			if (item.path().filename().string() != MAIN_PHOTO_NAME &&
 				item.path().filename().string() != GPS_NAME)
 				process.data += item.path().filename().string() + SEPERATOR;
 
