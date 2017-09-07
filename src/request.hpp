@@ -35,6 +35,7 @@ struct Process
 	bool			is_text;
 	bool			is_file;
 	TransferCode	transfer_code;
+	RequestCode		request_code;
 	std::string		data;
 };
 
@@ -44,7 +45,6 @@ static constexpr const char GPS_NAME[] = "gps";
 static constexpr const char TEXT_NAME[] = "text";
 static constexpr const char IMAGE_NAME[] = "image";
 static constexpr const char SEPERATOR = ' ';
-static constexpr const char NEWLINE_MARK[] = { static_cast<char>(250) };
 
 class Request
 {
@@ -87,6 +87,7 @@ public:
 			else
 			{
 				auto rc = static_cast<RequestCode>(code);
+				process.request_code = rc;
 				switch (rc)
 				{
 				case RequestCode::LIST_REGIONS:
@@ -233,7 +234,7 @@ private:
 		std::string line;
 		process.data = "";
 		while (std::getline(file, line))
-			process.data.append(line + NEWLINE_MARK);
+			process.data.append(line + "\n");
 		process.data.pop_back(); // remove last 
 		process.is_text = true;
 		process.transfer_code = TransferCode::TEXT;
