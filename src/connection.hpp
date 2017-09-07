@@ -95,12 +95,14 @@ private:
 		// write simple text line to client
 		else if (process.is_text)
 		{
-			Connection::_log("Sending text - ", process.data);
-
 			// write size first for the text files
 			if (process.request_code == RequestCode::GET_TEXT)
+			{
+				Connection::_log("Writing Size - ", process.data.size());
 				Connection::start_write(process.data.size());
+			}
 
+			Connection::_log("Sending text - ", process.data);	
 			Connection::start_write(process.data); // data -> text to send
 		}
 
