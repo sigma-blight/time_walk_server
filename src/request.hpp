@@ -10,7 +10,6 @@
 enum class TransferCode
 {
 	TEXT					= 00,
-	IMAGE					= 01,
 	EMPTY_DIRECTORY			= 02,
 	INVALID_REQUEST			= 10,
 	INVALID_DIRECTORY		= 11,
@@ -24,16 +23,12 @@ enum class RequestCode
 	LIST_IMAGES				= 02,
 	GET_GPS					= 10,
 	GET_TEXT				= 11,
-	TRANSFER_MAIN_REGION	= 20,
-	TRANSFER_MAIN_LANDMARK	= 21,
-	TRANSFER_IMAGE			= 22
+	GET_IMAGE				= 12
 };
 
 struct Process
 {
 	bool			is_invalid;
-	bool			is_text;
-	bool			is_file;
 	TransferCode	transfer_code;
 	RequestCode		request_code;
 	std::string		data;
@@ -63,8 +58,6 @@ public:
 		Request::_log("Processing request - ", request);
 		Process process;
 		process.is_invalid = false;
-		process.is_text = false;
-		process.is_file = false;
 
 		if (request.empty())
 		{
@@ -96,13 +89,9 @@ public:
 					list_process(rc, stream, process);
 					break;
 				case RequestCode::GET_GPS:
-				case RequestCode::GET_TEXT: 
+				case RequestCode::GET_TEXT:
+				case RequestCode::GET_IMAGE:
 					get_process(rc, stream, process);
-					break;
-				case RequestCode::TRANSFER_MAIN_REGION:
-				case RequestCode::TRANSFER_MAIN_LANDMARK:
-				case RequestCode::TRANSFER_IMAGE: 
-					transfer_process(rc, stream, process);
 					break;
 				default:
 					process.is_invalid = true;
@@ -193,10 +182,7 @@ private:
 			process.transfer_code = TransferCode::EMPTY_DIRECTORY;
 		}
 		else
-		{
-			process.is_text = true;
 			process.transfer_code = TransferCode::TEXT;
-		}
 	}
 
 	void get_process(RequestCode code, std::istringstream & stream, Process & process)
@@ -220,6 +206,12 @@ private:
 				return;
 			path.append(TEXT_NAME);
 			break;
+		case RequestCode::GET_IMAGE:
+			if (!stream_gob(path, process, stream, 3,
+				"command requiest <region>, <landmark> and <image_name> arguments"))
+				return;
+			path.append(IMAGE_NAME);
+			break;
 		}
 
 		if (!exists(path) || !is_regular_file(path))
@@ -236,50 +228,7 @@ private:
 		while (std::getline(file, line))
 			process.data.append(line + "\n");
 		process.data.pop_back(); // remove last 
-		process.is_text = true;
 		process.transfer_code = TransferCode::TEXT;
-	}
-
-	void transfer_process(RequestCode code, std::istringstream & stream, Process & process)
-	{
-		using namespace boost::filesystem;
-		Request::_log("Processing transfer command");
-
-		path path{ ROOT_DIR };
-
-		switch (code)
-		{
-		case RequestCode::TRANSFER_MAIN_REGION:
-			if (!stream_gob(path, process, stream, 1,
-				"command requires <region> argument"))
-				return;
-			path.append(MAIN_PHOTO_NAME);
-			break;
-		case RequestCode::TRANSFER_MAIN_LANDMARK:
-			if (!stream_gob(path, process, stream, 2,
-				"command requires <region> and <landmark> arguments"))
-				return;
-			path.append(MAIN_PHOTO_NAME);
-			break;
-		case RequestCode::TRANSFER_IMAGE:
-			if (!stream_gob(path, process, stream, 3,
-				"command requires <region>, <landmark> and <image_name> arguments"))
-				return;
-			path.append(IMAGE_NAME);
-			break;
-		}
-
-		if (!exists(path) || !is_regular_file(path))
-		{
-			process.is_invalid = true;
-			process.data = "invalid file";
-			process.transfer_code = TransferCode::INVALID_FILE;
-			return;
-		}
-		
-		process.is_file = true;
-		process.data = path.string();
-		process.transfer_code = TransferCode::IMAGE;
 	}
 };
 
