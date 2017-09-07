@@ -233,6 +233,7 @@ private:
 		process.data = "";
 		while (std::getline(file, line))
 			process.data.append(line + "\n");
+		process.data.pop_back(); // remove last "\n"
 		process.is_text = true;
 		process.transfer_code = TransferCode::TEXT;
 	}
