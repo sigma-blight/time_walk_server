@@ -1,14 +1,21 @@
 package project.chronos.timewalk;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.widget.ImageView;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
@@ -46,7 +53,8 @@ public class Client {
         LIST_LANDMARKS(1),
         LIST_IMAGES(2),
         GET_GPS(10),
-        GET_TEXT(11)
+        GET_TEXT(11),
+        TRANSFER_IMAGE(12)
         ;
 
         public final int code;
@@ -346,5 +354,82 @@ public class Client {
 
             return data;
         }
+    }
+
+    //  ** Transfer Image **
+
+    private class TransferImage extends AsyncTask<String, Void, Data<Bitmap>> {
+
+        @Override
+        protected Data<Bitmap> doInBackground(String... strings) {
+            Data<Bitmap> data = new Data<>();
+
+            _output.println(to_string(Request.TRANSFER_IMAGE) + " " +
+                strings[0] + " " + strings[1] + " " + strings[2] + ";");
+
+            try {
+
+                Transfer code = to_code(_input.readLine());
+                data.code = code;
+
+                if (code != Transfer.TEXT) {
+                    data.failed = true;
+                    data.error_msg = _input.readLine();
+                    return data;
+                }
+
+                String url = _input.readLine();
+
+                URL urlConnection = new URL(url);
+                HttpURLConnection connection = (HttpURLConnection) urlConnection
+                        .openConnection();
+                connection.setDoInput(true);
+                connection.connect();
+                InputStream input = connection.getInputStream();
+                data.result = BitmapFactory.decodeStream(input);
+                return data;
+
+            } catch (Exception e) {
+                Log.e(CLIENT_LOG, "TransferImage Failed: " + e.getMessage());
+
+                data.result = null;
+                data.failed = true;
+                data.error_msg = e.getMessage();
+                data.code = Transfer.EXCEPTION_FAIL;
+            }
+
+            return data;
+        }
+    }
+
+    public Data<ImageView> transferImage(String landmark, String image_name, Context context) {
+
+        Data<ImageView> data = new Data<>();
+
+        try {
+            TransferImage transferImage = new TransferImage();
+            Data<Bitmap> bitData = transferImage.execute("Brisbane", landmark, image_name).get();
+
+            data.code = bitData.code;
+            data.failed = bitData.failed;
+            data.error_msg = bitData.error_msg;
+
+            if (data.failed) {
+                data.result = null;
+                return data;
+            }
+
+            data.result = new ImageView(context);
+            data.result.setImageBitmap(bitData.result);
+
+        } catch (Exception e) {
+            Log.e(CLIENT_LOG, "transferImage Failed: " + e.getMessage());
+            data.result = null;
+            data.failed = true;
+            data.error_msg = e.getMessage();
+            data.code = Transfer.THREAD_FAIL;
+        }
+
+        return data;
     }
 }

@@ -9,6 +9,8 @@ import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 
 import java.util.ArrayList;
 
@@ -39,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
         if (!_client.connect()) {
             Log.e(LOG, "Connection Failed");
         } else {
+            Log.i(LOG, "Connected!");
             collectData();
         }
     }
@@ -73,13 +76,23 @@ public class MainActivity extends AppCompatActivity {
                         Log.i(LOG, "   " + image_name);
 
                         Client.Data<String> text;
+                        Client.Data<ImageView> image;
+
                         text = _client.getText(landmark, image_name);
+                        image = _client.transferImage(landmark, image_name, this);
 
                         if (text.failed) {
                             Log.e(LOG, "Text Failed: " + text.error_msg);
                         } else {
                             Log.i(LOG, "      - " + text.result);
                         }
+
+                        if (image.failed) {
+                            Log.e(LOG, "Image Failed: " + text.error_msg);
+                        } else {
+                            addContentView(image.result, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.FILL_PARENT));
+                        }
+
                     }
                 }
             }
