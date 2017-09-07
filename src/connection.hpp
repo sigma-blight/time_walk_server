@@ -178,7 +178,7 @@ private:
 
 		auto self = shared_from_this();
 		boost::asio::async_write(self->socket(),
-			boost::asio::buffer(*std::make_shared<std::vector<std::uint8_t>>(data.begin(), data.end())),
+			boost::asio::buffer(*std::make_shared<std::vector<std::uint8_t>>(data)),
 			boost::asio::transfer_all(),
 			[self, file, total_bytes](boost::system::error_code error, std::size_t bytes)
 		{
@@ -189,8 +189,11 @@ private:
 	void disconnect(void)
 	{
 		Connection::_log("Shutting down connection");
-		Connection::_socket.shutdown(socket_t::shutdown_both);
-		Connection::_socket.close();
+		boost::system::error_code code;
+		Connection::_socket.shutdown(socket_t::shutdown_both, code);
+		// code if disconnected from other end
+		if (!code)
+			Connection::_socket.close();
 	}
 };
 
