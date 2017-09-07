@@ -30,7 +30,9 @@ public class Client {
         INVALID_REQUEST(10),
         INVALID_DIRECTORY(11),
         INVALID_FILE(12),
-        EXCEPTION_FAIL(20)
+        EXCEPTION_FAIL(20),
+        THREAD_FAIL(21),
+        UNKNOWN(30)
         ;
 
         public final int code;
@@ -59,7 +61,16 @@ public class Client {
 
     private Transfer to_code(String code_str) {
         int code = Integer.parseInt(code_str);
-        return Transfer.values()[code];
+        switch(code)
+        {
+            case 0: return Transfer.TEXT;
+            case 1: return Transfer.IMAGE;
+            case 2: return Transfer.EMPTY_DIRECTORY;
+            case 10: return Transfer.INVALID_REQUEST;
+            case 11: return Transfer.INVALID_DIRECTORY;
+            case 12: return Transfer.INVALID_FILE;
+            default: return Transfer.UNKNOWN;
+        }
     }
 
     public class Data<T> {
@@ -100,7 +111,7 @@ public class Client {
             conn.execute().get();
             return true;
         } catch (Exception e) {
-            Log.e(CLIENT_LOG, "connection interrupted: " + e.getMessage());
+            Log.e(CLIENT_LOG, "connect interrupted: " + e.getMessage());
         }
         return false;
     }
@@ -146,9 +157,16 @@ public class Client {
             Landmarks land = new Landmarks();
             return land.execute("Brisbane").get();
         } catch (Exception e) {
-            Log.e(CLIENT_LOG, "landmarks interrupted: " + e.getMessage());
+            Log.e(CLIENT_LOG, "landmarks Interrupted: " + e.getMessage());
+
+            Data<ArrayList<String>> data = new Data<>();
+            data.result = null;
+            data.failed = true;
+            data.error_msg = e.getMessage();
+            data.code = Transfer.THREAD_FAIL;
+
+            return data;
         }
-        return null;
     }
 
     //  ** IMAGE NAMES **
@@ -160,7 +178,7 @@ public class Client {
             Data<ArrayList<String>> data = new Data<>();
 
             _output.println(to_string(Request.LIST_IMAGES) + " " +
-                    strings[0] + " " + strings[1] + " " + strings[2] + ";");
+                    strings[0] + " " + strings[1] + ";");
 
             try {
                 Transfer code = to_code(_input.readLine());
@@ -176,7 +194,7 @@ public class Client {
                 }
 
             } catch (Exception e) {
-                Log.e(CLIENT_LOG, "Images Failed: " + e.getLocalizedMessage());
+                Log.e(CLIENT_LOG, "ImageNames Failed: " + e.getLocalizedMessage());
                 data.result = null;
                 data.failed = true;
                 data.error_msg = e.getMessage();
@@ -192,9 +210,16 @@ public class Client {
             ImageNames images = new ImageNames();
             return images.execute("Brisbane", landmark).get();
         } catch (Exception e) {
-            Log.e(CLIENT_LOG, "Image Names Interrupted: " + e.getMessage());
+            Log.e(CLIENT_LOG, "imageNames Interrupted: " + e.getMessage());
+
+            Data<ArrayList<String>> data = new Data<>();
+            data.result = null;
+            data.failed = true;
+            data.error_msg = e.getMessage();
+            data.code = Transfer.THREAD_FAIL;
+
+            return data;
         }
-        return null;
     }
 
     //  ** GPS **
@@ -210,23 +235,30 @@ public class Client {
         protected Data<GPSCoord> doInBackground(String... strings) {
             Data<GPSCoord> data = new Data<>();
 
-            try {
+            _output.println(to_string(Request.GET_GPS) + " " +
+                strings[0] + " " + strings[1] + ";");
 
+            try {
                 Transfer code = to_code(_input.readLine());
                 data.code = code;
 
                 if (code != Transfer.TEXT) {
                     data.failed = true;
+                    data.result = null;
                     data.error_msg = _input.readLine();
                 } else {
-                    String[] gps_str_arr = _input.readLine().split(" ");
+
+                    ArrayList<String> gps_str_arr = new ArrayList<>();
+                    for (String gps_str : _input.readLine().split(" "))
+                        gps_str_arr.add(gps_str);
+
                     data.result = new GPSCoord();
-                    data.result.longitude = Double.parseDouble(gps_str_arr[0]);
-                    data.result.latitude = Double.parseDouble(gps_str_arr[0]);
+                    data.result.longitude = Double.parseDouble(gps_str_arr.get(0));
+                    data.result.latitude = Double.parseDouble(gps_str_arr.get(1));
                 }
 
             } catch (Exception e) {
-                Log.e(CLIENT_LOG, "GPS Failed: " + e.getMessage());
+                Log.e(CLIENT_LOG, "GPS Failed: " + e.getLocalizedMessage());
                 data.result = null;
                 data.failed = true;
                 data.error_msg = e.getMessage();
@@ -242,8 +274,77 @@ public class Client {
             GPS gps = new GPS();
             return gps.execute("Brisbane", landmark).get();
         } catch (Exception e) {
-            Log.e(CLIENT_LOG, "GPS Coord Interrupted: " + e.getMessage());
+            Log.e(CLIENT_LOG, "gpsCoord Interrupted: " + e.getMessage());
+
+            Data<GPSCoord> data = new Data<>();
+
+            data.result = null;
+            data.failed = true;
+            data.error_msg = e.getMessage();
+            data.code = Transfer.THREAD_FAIL;
+
+            return data;
         }
-        return null;
+    }
+
+    //  ** TEXT **
+
+    private class Text extends AsyncTask<String, Void, Data<String>> {
+
+        @Override
+        protected Data<String> doInBackground(String... strings) {
+            Data<String> data = new Data<>();
+
+            _output.println(to_string(Request.GET_TEXT) + " " +
+                strings[0] + " " + strings[1] + " " + strings[2] + ";");
+
+            try {
+
+                Transfer code = to_code(_input.readLine());
+                data.code = code;
+
+                if (code != Transfer.TEXT) {
+                    data.failed = true;
+                    data.error_msg = _input.readLine();
+                } else {
+                    int size = Integer.parseInt(_input.readLine());
+                    Log.d(CLIENT_LOG, "Text Size: " + Integer.toString(size));
+                    StringBuilder builder = new StringBuilder();
+                    while (size >= 0) {
+                        builder.append((char)_input.read());
+                        --size;
+                    }
+                    data.result = builder.toString();
+                }
+
+            } catch (Exception e) {
+                Log.e(CLIENT_LOG, "Text Failed: " + e.getMessage());
+                data.result = null;
+                data.failed = true;
+                data.error_msg = e.getMessage();
+                data.code = Transfer.EXCEPTION_FAIL;
+            }
+
+            return data;
+        }
+    }
+
+    public Data<String> getText(String landmark, String image_name) {
+
+        try {
+            Text txt = new Text();
+            return txt.execute("Brisbane", landmark, image_name).get();
+        } catch (Exception e) {
+            Log.e(CLIENT_LOG, "getText Interrupted: " + e.getMessage());
+
+            Data<String> data = new Data<>();
+
+            data.result = null;
+            data.failed = true;
+            data.error_msg = e.getMessage();
+            data.code = Transfer.THREAD_FAIL;
+
+            return data;
+        }
     }
 }

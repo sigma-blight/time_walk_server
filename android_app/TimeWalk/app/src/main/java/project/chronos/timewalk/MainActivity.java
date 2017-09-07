@@ -14,6 +14,8 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String LOG = "TIME_WALK_LOG";
+
     Client _client;
 
     @Override
@@ -33,12 +35,55 @@ public class MainActivity extends AppCompatActivity {
         });
 
         _client = new Client();
-        _client.connect();
 
-        Client.Data<ArrayList<String>> data = _client.landmarks();
-        String res = "";
-        for (String s : data.result)
-            Log.i(Client.CLIENT_LOG, "Landmark: " + s);
+        if (!_client.connect()) {
+            Log.e(LOG, "Connection Failed");
+        } else {
+            collectData();
+        }
+    }
+
+    private void collectData() {
+        Client.Data<ArrayList<String>> landmarks;
+        landmarks = _client.landmarks();
+
+        if (landmarks.failed) {
+            Log.e(LOG, "Failed to Get Landmarks: " + landmarks.error_msg);
+        } else {
+            for (String landmark : landmarks.result) {
+                Log.i(LOG, landmark);
+
+                Client.Data<Client.GPSCoord> gpsData;
+                Client.Data<ArrayList<String>> imageNames;
+
+                gpsData = _client.gpsCoord(landmark);
+                imageNames = _client.imageNames(landmark);
+
+                if (gpsData.failed) {
+                    Log.e(LOG, "GPS Failed: " + gpsData.error_msg);
+                } else {
+                    Log.i(LOG, "   @ " + Double.toString(gpsData.result.longitude) +
+                        ", " + Double.toString(gpsData.result.latitude));
+                }
+
+                if (imageNames.failed) {
+                    Log.e(LOG, "Image Names Failed: " + imageNames.error_msg);
+                } else {
+                    for (String image_name : imageNames.result) {
+                        Log.i(LOG, "   " + image_name);
+
+                        Client.Data<String> text;
+                        text = _client.getText(landmark, image_name);
+
+                        if (text.failed) {
+                            Log.e(LOG, "Text Failed: " + text.error_msg);
+                        } else {
+                            Log.i(LOG, "      - " + text.result);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
