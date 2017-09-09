@@ -191,6 +191,7 @@ private:
 			// expects <region> <landmark> <image_name>
 			append_path(file, process, stream, 3);
 			file.append(TEXT_FILENAME);
+			process.write_size_required = true;
 			break;
 		case RequestCode::GET_IMAGE:
 			// expects <region> <landmark> <image_name> <size>
