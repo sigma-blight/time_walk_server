@@ -75,9 +75,9 @@ private:
 
 		// delete the READ_UNTIL character
 		auto pos = read_data.find_last_of(READ_UNTIL);
-		if (pos != std::string::npos) read_data.erase(pos);
+		if (pos != std::string::npos) read_data.erase(pos);		
 		
-		
+		// process the request
 		auto process = Connection::_request.process(read_data);
 
 		// informs client if transfer is successful and file or text

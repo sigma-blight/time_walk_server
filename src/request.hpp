@@ -23,7 +23,8 @@ enum class RequestCode
 	LIST_IMAGES				= 02,
 	GET_GPS					= 10,
 	GET_TEXT				= 11,
-	GET_IMAGE				= 12
+	GET_IMAGE				= 12,
+	GET_MAIN_IMAGE_LANDMARK	= 13
 };
 
 struct Process
@@ -91,6 +92,7 @@ public:
 				case RequestCode::GET_GPS:
 				case RequestCode::GET_TEXT:
 				case RequestCode::GET_IMAGE:
+				case RequestCode::GET_MAIN_IMAGE_LANDMARK:
 					get_process(rc, stream, process);
 					break;
 				default:
@@ -212,6 +214,12 @@ private:
 				return;
 			path.append(IMAGE_NAME);
 			break;
+		case RequestCode::GET_MAIN_IMAGE_LANDMARK:
+			if (!stream_gob(path, process, stream, 2,
+				"command requiest <region> and <landmark> arguments"))
+				return;
+			path.append(MAIN_PHOTO_NAME);
+			break;
 		}
 
 		if (!exists(path) || !is_regular_file(path))
@@ -227,7 +235,7 @@ private:
 		process.data = "";
 		while (std::getline(file, line))
 			process.data.append(line + "\n");
-		process.data.pop_back(); // remove last 
+		process.data.pop_back(); // remove last newline
 		process.transfer_code = TransferCode::TEXT;
 	}
 };
