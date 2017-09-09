@@ -9,43 +9,48 @@
 
 enum class TransferCode
 {
-	TEXT					= 00,
-	EMPTY_DIRECTORY			= 02,
+	SUCCESS					= 0,
+	EMPTY_REQUEST			= 1,
+	EMPTY_DIRECTORY			= 2,
+	EMPTY_FILE				= 3,
 	INVALID_REQUEST			= 10,
-	INVALID_DIRECTORY		= 11,
-	INVALID_FILE			= 12
+	INVALID_REQUEST_CODE	= 11,
+	INVALID_ARGUMENT_COUNT	= 12,
+	INVALID_ARGUMENTS		= 13,
+	INVALID_DIRECTORY		= 14,
+	INVALID_FILE			= 15
 };
 
 enum class RequestCode
 {
-	LIST_REGIONS			= 00,
-	LIST_LANDMARKS			= 01,
-	LIST_IMAGES				= 02,
-	GET_GPS					= 10,
-	GET_TEXT				= 11,
-	GET_IMAGE				= 12,
-	GET_MAIN_IMAGE_LANDMARK	= 13
+	LIST_REGIONS				= 0,
+	LIST_LANDMARKS				= 1,
+	LIST_IMAGES					= 2,
+	GET_REGION_GPS				= 10,
+	GET_LANDMARK_GPS			= 11,
+	GET_TEXT					= 20,
+	GET_IMAGE					= 21,
+	GET_POSTCARD_IMAGE_LANDMARK	= 30,
+	GET_POSTCARD_IMAGE_REGION	= 31
 };
 
 struct Process
 {
-	bool			is_invalid;
-	TransferCode	transfer_code;
-	RequestCode		request_code;
+	bool			is_valid = true;
+	bool			write_size_required = false;
 	std::string		data;
+	TransferCode	transfer_code = TransferCode::SUCCESS;
 };
 
 static constexpr const char ROOT_DIR[] = "../../archives/time_walk/";
-static constexpr const char MAIN_PHOTO_NAME[] = "main_photo";
-static constexpr const char GPS_NAME[] = "gps";
-static constexpr const char TEXT_NAME[] = "text";
-static constexpr const char IMAGE_NAME[] = "image";
-static constexpr const char SEPERATOR = ' ';
+static constexpr const char SEPERATOR = '|';
+static constexpr const char GPS_FILENAME[] = "gps";
+static constexpr const char POSTCARD_IMAGE_FILENAME[] = "postcard_image";
+static constexpr const char TEXT_FILENAME[] = "text";
+static constexpr const char IMAGE_FILENAME[] = "image";
 
 class Request
 {
-	
-
 	Log & _log;
 
 public:
@@ -54,189 +59,215 @@ public:
 		_log{ log }
 	{}
 
-	Process process(const std::string & request)
+	Process process(const std::string & data)
 	{
-		Request::_log("Processing request - ", request);
-		Process process;
-		process.is_invalid = false;
+		Request::_log("Process Request - ", data);
+		Process result;
 
-		if (request.empty())
+		if (data.empty())
 		{
-			process.is_invalid = true;
-			process.data = "empty request";
-			process.transfer_code = TransferCode::INVALID_REQUEST;
+			result.data = "empty request";
+			result.is_valid = false;
+			result.transfer_code = TransferCode::EMPTY_REQUEST;
 		}
 		else
 		{
-			std::size_t code;
-			std::istringstream stream{ request };
-			stream >> code;
+			std::istringstream stream{ data };
+			std::size_t request_code;
+			stream >> request_code;
 
 			if (stream.fail())
 			{
-				process.is_invalid = true;
-				process.data = "invalid request";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
+				result.data = "invalid request";
+				result.is_valid = false;
+				result.transfer_code = TransferCode::INVALID_REQUEST;
 			}
 			else
 			{
-				auto rc = static_cast<RequestCode>(code);
-				process.request_code = rc;
-				switch (rc)
+				auto code = static_cast<RequestCode>(request_code);
+				switch (code)
 				{
 				case RequestCode::LIST_REGIONS:
 				case RequestCode::LIST_LANDMARKS:
 				case RequestCode::LIST_IMAGES:
-					list_process(rc, stream, process);
+					list_request(result, stream, code);
 					break;
-				case RequestCode::GET_GPS:
+
+				case RequestCode::GET_REGION_GPS:
+				case RequestCode::GET_LANDMARK_GPS:
 				case RequestCode::GET_TEXT:
 				case RequestCode::GET_IMAGE:
-				case RequestCode::GET_MAIN_IMAGE_LANDMARK:
-					get_process(rc, stream, process);
+				case RequestCode::GET_POSTCARD_IMAGE_LANDMARK:
+				case RequestCode::GET_POSTCARD_IMAGE_REGION:
+					get_request(result, stream, code);
 					break;
+
 				default:
-					process.is_invalid = true;
-					process.data = "invalid request code";
-					process.transfer_code = TransferCode::INVALID_REQUEST;
+					result.data = "invalid request code";
+					result.is_valid = false;
+					result.transfer_code = TransferCode::INVALID_REQUEST_CODE;
 					break;
 				}
 			}
-		}	
+		}
 
-		return process;
+		return result;
 	}
 
 private:
 
-	bool stream_gob(boost::filesystem::path & path, Process & process,
-		std::istringstream & stream, std::size_t args, 
-		const std::string & arg_fault = "invalid arguments")
+	void list_request(Process & process, std::istringstream & stream, 
+		const RequestCode & code)
 	{
 		using namespace boost::filesystem;
-
-		for (std::size_t i = 0; i != args; ++i)
-		{
-			if (stream.eof())
-			{
-				process.is_invalid = true;
-				process.data = arg_fault;
-				process.transfer_code = TransferCode::INVALID_REQUEST;
-				return false;
-			}
-
-			std::string dir;
-			stream >> dir;
-			if (stream.fail())
-			{
-				process.is_invalid = true;
-				process.data = "invalid request";
-				process.transfer_code = TransferCode::INVALID_REQUEST;
-				return false;
-			}
-
-			path.append(dir);
-		}
-		return true;
-	}
-
-	void list_process(RequestCode code, std::istringstream & stream, Process & process)
-	{
-		using namespace boost::filesystem;
-		Request::_log("Processing list command");		
-
-		path path{ ROOT_DIR };
+		path dir{ ROOT_DIR };
 
 		switch (code)
-		{			
-		case RequestCode::LIST_REGIONS: break; // root is regions dir
+		{
+		case RequestCode::LIST_REGIONS: break;
 		case RequestCode::LIST_LANDMARKS:
-			if (!stream_gob(path, process, stream, 1, 
-				"command requires <region> argument"))
-				return;
+			// expects <region>
+			append_path(dir, process, stream, 1);
 			break;
-
 		case RequestCode::LIST_IMAGES:
-			if (!stream_gob(path, process, stream, 2, 
-				"command requiest <region> and <landmark> arguments"))
-				return;
+			// expects <region> <landmark>
+			append_path(dir, process, stream, 2);
 			break;
 		}
 
-		Request::_log("Getting contents of - ", path.string());
+		// exit if append_path detects error
+		if (!process.is_valid) return;
 
-		if (!exists(path) || !is_directory(path))
+		Request::_log("Listing contents of - ", dir.string());
+
+		// send error if invalid directory
+		if (!exists(dir) || !is_directory(dir))
 		{
-			process.is_invalid = true;
+			process.is_valid = false;
 			process.data = "invalid directory";
 			process.transfer_code = TransferCode::INVALID_DIRECTORY;
 			return;
 		}
 
-		for (auto && item : directory_iterator(path))
-			if (item.path().filename().string() != MAIN_PHOTO_NAME &&
-				item.path().filename().string() != GPS_NAME)
-				process.data += item.path().filename().string() + SEPERATOR;
+		// get all filenames in directory
+		for (auto && item : directory_iterator(dir))
+			if (item.path().filename().string() != GPS_FILENAME &&
+				item.path().filename().string() != POSTCARD_IMAGE_FILENAME)
+			{
+				process.data.append(item.path().filename().string());
+				process.data.push_back(SEPERATOR);
+			}
 
+		// error if nothing in directory
 		if (process.data.empty())
 		{
-			Request::_log("Empty directory");
+			process.data = "empty directory";
+			process.is_valid = false;
 			process.transfer_code = TransferCode::EMPTY_DIRECTORY;
 		}
 		else
-			process.transfer_code = TransferCode::TEXT;
+			process.data.pop_back(); // remove last seperator
 	}
 
-	void get_process(RequestCode code, std::istringstream & stream, Process & process)
+	void get_request(Process & process, std::istringstream & stream,
+		const RequestCode & code)
 	{
 		using namespace boost::filesystem;
-		Request::_log("Processing get command");
-
-		path path{ ROOT_DIR };
+		path file{ ROOT_DIR };
 
 		switch (code)
 		{
-		case RequestCode::GET_GPS:
-			if (!stream_gob(path, process, stream, 2, 
-				"command requiest <region> and <landmark> arguments"))
-				return;
-			path.append(GPS_NAME);
+		case RequestCode::GET_REGION_GPS:
+			// expects <region>
+			append_path(file, process, stream, 1);
+			file.append(GPS_FILENAME);
+			break;
+		case RequestCode::GET_LANDMARK_GPS:
+			// expects <region> <landmark>
+			append_path(file, process, stream, 2);
+			file.append(GPS_FILENAME);
 			break;
 		case RequestCode::GET_TEXT:
-			if (!stream_gob(path, process, stream, 3, 
-				"command requiest <region>, <landmark> and <image_name> arguments"))
-				return;
-			path.append(TEXT_NAME);
+			// expects <region> <landmark> <image_name>
+			append_path(file, process, stream, 3);
+			file.append(TEXT_FILENAME);
 			break;
 		case RequestCode::GET_IMAGE:
-			if (!stream_gob(path, process, stream, 3,
-				"command requiest <region>, <landmark> and <image_name> arguments"))
-				return;
-			path.append(IMAGE_NAME);
+			// expects <region> <landmark> <image_name> <size>
+			append_path(file, process, stream, 3); // first 3
+			file.append(IMAGE_FILENAME);
+			append_path(file, process, stream, 1); // size
 			break;
-		case RequestCode::GET_MAIN_IMAGE_LANDMARK:
-			if (!stream_gob(path, process, stream, 2,
-				"command requiest <region> and <landmark> arguments"))
-				return;
-			path.append(MAIN_PHOTO_NAME);
+		case RequestCode::GET_POSTCARD_IMAGE_REGION:
+			// expects <region>
+			append_path(file, process, stream, 1);
+			file.append(POSTCARD_IMAGE_FILENAME);
+			break;
+		case RequestCode::GET_POSTCARD_IMAGE_LANDMARK:
+			// expects <region> <landmark>
+			append_path(file, process, stream, 2);
+			file.append(POSTCARD_IMAGE_FILENAME);
 			break;
 		}
 
-		if (!exists(path) || !is_regular_file(path))
+		// exit if append_path detects error
+		if (!process.is_valid) return;
+
+		Request::_log("Getting contents of - ", file.string());
+
+		if (!exists(file) || !is_regular_file(file))
 		{
-			process.is_invalid = true;
 			process.data = "invalid file";
+			process.is_valid = false;
 			process.transfer_code = TransferCode::INVALID_FILE;
 			return;
 		}
 
-		std::ifstream file{ path.string() };
+		std::ifstream file_stream{ file.string() };
 		std::string line;
-		process.data = "";
-		while (std::getline(file, line))
+		while (std::getline(file_stream, line))
 			process.data.append(line + "\n");
-		process.data.pop_back(); // remove last newline
-		process.transfer_code = TransferCode::TEXT;
+
+		if (process.data.empty())
+		{
+			process.data = "empty file";
+			process.is_valid = false;
+			process.transfer_code = TransferCode::EMPTY_FILE;
+		}
+		else
+			process.data.pop_back(); // remove last newline
+	}
+
+	void append_path(boost::filesystem::path & path, Process & process,
+		std::istringstream & stream, std::size_t args)
+	{
+		using namespace boost::filesystem;
+	
+		for (std::size_t i = 0; i != args; ++i)
+		{
+			// expected more arguments
+			if (stream.eof())
+			{
+				process.is_valid = false;
+				process.data = "invalid arguments";
+				process.transfer_code = TransferCode::INVALID_ARGUMENT_COUNT;
+				return;
+			}
+	
+			std::string dir;
+			stream >> dir;
+
+			// invalid string
+			if (stream.fail())
+			{
+				process.is_valid = false;
+				process.data = "invalid request";
+				process.transfer_code = TransferCode::INVALID_ARGUMENTS;
+				return;
+			}
+	
+			path.append(dir);
+		}
 	}
 };
 

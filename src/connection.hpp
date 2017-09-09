@@ -63,52 +63,54 @@ private:
 
 	void on_read(boost::system::error_code error, std::size_t bytes)
 	{
+		// report error and shutdown
 		if (error)
 		{
 			Connection::_log("Fatal read - ", error.message());
 			return;
 		}
-		
-		std::string read_data;
-		std::istream stream{ &(Connection::_read_buffer) };
-		std::getline(stream, read_data);
 
-		// delete the READ_UNTIL character
-		auto pos = read_data.find_last_of(READ_UNTIL);
-		if (pos != std::string::npos) read_data.erase(pos);		
-		
-		// process the request
-		auto process = Connection::_request.process(read_data);
+		std::string request = read_data();
+		auto process = Connection::_request.process(request);
+		std::size_t code = Connection::transfer_code(process);
 
-		// informs client if transfer is successful and file or text
-		std::size_t code = static_cast<std::size_t>(process.transfer_code);
-		Connection::_log("TransferCode - ", code);
-		Connection::start_write(code);
+		Connection::_log("Writing Transfer Code - ", code);
+		Connection::write_number(code);
 
-		// write related error message to client
-		if (process.is_invalid)
-		{
-			Connection::_log("Invalid request - ", process.data);
-			Connection::start_write(process.data); // data -> error message
-		}
-		else
-		{
-			// write size first for the text files
-			if (process.request_code == RequestCode::GET_TEXT)
+		if (process.is_valid)
+		{			
+			if (process.write_size_required)
 			{
 				Connection::_log("Writing Size - ", process.data.size());
-				Connection::start_write(process.data.size());
+				Connection::write_number(process.data.size());
 			}
-
-			Connection::_log("Sending text - ", process.data);
-			Connection::start_write(process.data); // data -> text to send
+			
 		}
 
-		// start another read after processing request
+		Connection::_log("Sending Data - ", process.data);
+		Connection::start_write(process.data);
 		Connection::start_read();
 	}
 
-	void start_write(std::size_t code)
+	std::string read_data(void)
+	{
+		std::string data;
+		std::istream stream{ &(Connection::_read_buffer) };
+		std::getline(stream, data);
+
+		auto pos = data.find_last_of(READ_UNTIL);
+		if (pos != std::string::npos)
+			data.erase(pos);
+
+		return data;
+	}
+
+	std::size_t transfer_code(const Process & process)
+	{
+		return static_cast<std::size_t>(process.transfer_code);
+	}
+
+	bool write_number(std::size_t code)
 	{
 		auto self = shared_from_this();
 		boost::system::error_code error;
@@ -118,6 +120,8 @@ private:
 
 		if (error)
 			self->_log("Fatal Write - ", error.message());
+
+		return error;
 	}
 
 	// pass by value to avoid thread issues
