@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="project.chronos.timewalk.HomeScreen">
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical">
+
+        <Button
+            android:id="@+id/home_screen_btn_search"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="0dip"
+            android:layout_weight="30"
+            android:fontFamily="monospace"
+            android:text="@string/home_screen_search"
+            android:textAlignment="center"
+            android:textAllCaps="false"
+            android:textSize="24sp" />
+
+        <Button
+            android:id="@+id/home_screen_btn_routes"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="0dip"
+            android:layout_weight="30"
+            android:fontFamily="monospace"
+            android:text="@string/home_screen_routes"
+            android:textAllCaps="false"
+            android:textSize="24sp" />
+
+        <Button
+            android:id="@+id/home_screen_btn_personalise"
+            style="@style/Widget.AppCompat.Button.Colored"
+            android:layout_width="match_parent"
+            android:layout_height="0dip"
+            android:layout_weight="30"
+            android:fontFamily="monospace"
+            android:text="@string/home_screen_personalise"
+            android:textAllCaps="false"
+            android:textSize="24sp" />
+
+    </LinearLayout>
+
+</android.support.constraint.ConstraintLayout>
