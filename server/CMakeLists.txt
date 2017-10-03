@@ -12,9 +12,10 @@ SET(CMAKE_CXX_STANDARD_REQUIRED)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
 	-O3 \
 	-fno-rtti \
+	-Wall \
+	-pedantic \
 	") ## REPLACE WITH FOLLOWING FOR SOLARIS
 #	-pthreads")
-
 
 #	FIND THREADS AND BOOST
 
