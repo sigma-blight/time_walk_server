@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include <memory>
 #include "log.hpp"
+#include "processor.hpp"
 
 class Connection : public std::enable_shared_from_this<Connection>
 {
@@ -13,6 +14,7 @@ class Connection : public std::enable_shared_from_this<Connection>
 	tcp_t::socket				_socket;
 	Log							_log;
 	boost::asio::streambuf		_request;
+	Processor					_processor;
 
 public:
 
@@ -26,6 +28,7 @@ private:
 
 	void stop(void);
 	void start_read(void);
+	void start_write(const std::string);
 };
 
 #endif	//	_PROJECT_TIME_WALK_CONNECTION_HPP_

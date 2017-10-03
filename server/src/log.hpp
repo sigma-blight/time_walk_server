@@ -58,7 +58,7 @@ public:
 			break;
 		}
 
-		std::cout << " [ID = " << std::to_string(Log::_id) << "] ";
+		std::cout << " [ID " << std::to_string(Log::_id) << "] ";
 		print(std::cout, std::move(data) ...);
 	}
 

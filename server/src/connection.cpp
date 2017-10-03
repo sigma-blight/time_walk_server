@@ -1,6 +1,6 @@
 #include "connection.hpp"
 #include <string>
-#include <stringstream>
+#include <sstream>
 
 Connection::Connection(boost::asio::io_service & io_service) :
 	_io_service{ io_service },
@@ -57,6 +57,14 @@ void Connection::start_read(void)
 			std::getline(stream, request);
 
 			conn->_log(Log::INFO, "Successful Read [", bytes, " bytes] - ", request);
+			
+			std::string response = conn->_processor(request);
+			conn->start_write(response);
 		}
 	});
+}
+
+void Connection::start_write(const std::string data)
+{
+	// TODO
 }
