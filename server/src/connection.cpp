@@ -1,6 +1,9 @@
 #include "connection.hpp"
+#include "processor.hpp"
 #include <string>
 #include <sstream>
+
+static constexpr const char DELIMITER = ';';
 
 Connection::Connection(boost::asio::io_service & io_service) :
 	_io_service{ io_service },
@@ -30,8 +33,8 @@ void Connection::start(void)
 
 void Connection::stop(void)
 {
-	Connection::_log(Log::INFO, "Stopping Connection");
-	// TODO: shutdown
+	// TODO: shutdown - don't print this twice (destructor)
+	Connection::_log(Log::INFO, "Stopping Connection");	
 }
 
 void Connection::start_read(void)
@@ -40,7 +43,7 @@ void Connection::start_read(void)
 	boost::asio::async_read_until(
 		conn->_socket,
 		conn->_request,
-		';',
+		DELIMITER,
 		[conn](const boost::system::error_code error,
 			const std::size_t bytes)
 	{
@@ -55,16 +58,74 @@ void Connection::start_read(void)
 			std::string request;
 			std::istream stream(&conn->_request);
 			std::getline(stream, request);
+			request.pop_back(); // remove new_line from getline
+			request.pop_back(); // remove the trailing delimiter
 
-			conn->_log(Log::INFO, "Successful Read [", bytes, " bytes] - ", request);
+			conn->_log(Log::INFO, "Successful Read of ", bytes, " bytes - ", request);
 			
-			std::string response = conn->_processor(request);
-			conn->start_write(response);
+			conn->start_write(process(request, conn->_log));
+			conn->start_read();
 		}
 	});
 }
 
+/*
+
+DATA:		abcdefg
+SEND:		to_string(size of DATA) + new_line
+SEND:		DATA + new_line
+
+*/
+
 void Connection::start_write(const std::string data)
 {
-	// TODO
+	auto conn = shared_from_this();
+	auto data_ptr = std::make_shared<std::string>(data);
+	auto size_str_ptr = std::make_shared<std::string>(
+		std::to_string(data.size()).append("\n"));
+	data_ptr->append("\n");
+
+	boost::asio::async_write(
+		conn->_socket,
+		boost::asio::buffer(*size_str_ptr),
+		[conn, data_ptr, size_str_ptr]
+		(const boost::system::error_code error, const std::size_t bytes)
+	{
+		if (error)
+		{
+			conn->_log(Log::ERROR, "Fatal Size Write - ", error.message());
+			conn->stop();
+		}
+		else
+		{
+
+			size_str_ptr->pop_back(); // remove newline for logging
+			conn->_log(Log::INFO, "Successful Size Write of ", bytes,
+				" bytes - ", *size_str_ptr);
+
+			conn->continue_write(data_ptr);
+		}
+	});
+}
+
+void Connection::continue_write(std::shared_ptr<std::string> data_ptr)
+{
+	auto conn = shared_from_this();
+	boost::asio::async_write(
+		conn->_socket,
+		boost::asio::buffer(*data_ptr),
+		[conn, data_ptr](const boost::system::error_code error,
+			const std::size_t bytes)
+	{
+		if (error)
+		{
+			conn->_log(Log::ERROR, "Fatal Write - ", error.message());
+			conn->stop();
+		}
+		else
+		{
+			data_ptr->pop_back(); // remove newline for logging
+			conn->_log(Log::INFO, "Successful Write of ", bytes, " bytes - ", *data_ptr);
+		}
+	});
 }
