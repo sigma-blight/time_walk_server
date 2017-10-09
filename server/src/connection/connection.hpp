@@ -12,12 +12,18 @@ private:
 
     using tcp_t = boost::asio::ip::tcp;
 
+    boost::asio::io_service & _io_service;
     tcp_t::socket _socket;
 
 public:
 
-    tcp_t::socket & socket(void) { return Connection::_socket; }
-    const tcp_t::socket & socket(void) const { return Connection::_socket; }
+    Connection(boost::asio::io_service & io_service) :
+        _io_service{ io_service },
+        _socket{ io_service }
+    {}
+
+    tcp_t::socket & socket(void);
+    const tcp_t::socket & socket(void) const;
 };
 
 #endif  //  _PROJECT_TIME_WALK_CONNECTION_CONNECTION_HPP_

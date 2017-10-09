@@ -73,12 +73,15 @@ public:
             Server::_access_acceptor,
             Server::_port._access_port);
 
-        setup_acceptor(
+        /*setup_acceptor(
             Server::_archive_acceptor,
-            Server::_port._archive_port);
+            Server::_port._archive_port);*/
 
-        accept(std::make_shared<ClientConnection>());
-        accept(std::make_shared<AccessConnection>());
+        accept(Server::_client_acceptor, 
+            std::make_shared<ClientConnection>(_io_service));
+
+        accept(Server::_access_acceptor, 
+            std::make_shared<AccessConnection>(_io_service));
         
     }
 
@@ -97,14 +100,14 @@ private:
     void accept(tcp_t::acceptor & acceptor,
         std::shared_ptr<Type_> connection)
     {
-        static_assert(std::is_base_of<Connection, Type_>::value,
-            "Invalid connection type, requires `Connection` Base");
+        //static_assert(std::is_base_of<Connection, Type_>::value,
+        //    "Invalid connection type, requires `Connection` Base");
 
-        acceptor.async_accept(connection->socket(),
-            [&, connection](const boost::system::error_code error)
-        {
-            if (error)
-        });
+        //acceptor.async_accept(connection->socket(),
+        //    [&, connection](const boost::system::error_code error)
+        //{
+        //    if (error)
+        //});
     }
 };
 

@@ -7,6 +7,8 @@ class AccessConnection : public Connection
 {
 public:
 
+    using Connection::Connection;
+
     void start()
     {
 
