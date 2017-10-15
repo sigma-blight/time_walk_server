@@ -323,6 +323,7 @@ public class ExploreScreen extends FragmentActivity implements OnMapReadyCallbac
             @Override
             void run() {
                 loadJourneys();
+                mMap.clear();
             }
         };
 

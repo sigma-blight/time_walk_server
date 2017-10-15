@@ -142,7 +142,7 @@ public class JourneyHelper {
     }
 
 
-    static void createNewJourney(Context context) {
+    static void createNewJourney(Context context, View.OnClickListener callback) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle("Enter New Journey Name");
 
@@ -155,8 +155,8 @@ public class JourneyHelper {
 
             EditText input;
             Context context;
+            View.OnClickListener callback;
 
-            @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 Log.e(TAG, "Adding Journey: " + input.getText().toString());
                 try {
@@ -173,12 +173,14 @@ public class JourneyHelper {
                     Log.e(TAG, "Failed to Add new Journey: " + input.getText().toString() + " -- " + e.getMessage());
                 }
 
+                callback.onClick(null);
             }
         }
 
         Listener listener = new Listener();
         listener.input = input;
         listener.context = context;
+        listener.callback = callback;
 
         builder.setPositiveButton("Create", listener);
         builder.setView(input);

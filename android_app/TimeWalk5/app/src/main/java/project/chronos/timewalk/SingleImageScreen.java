@@ -1,10 +1,11 @@
 package project.chronos.timewalk;
 
-import android.graphics.Bitmap;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+
+import uk.co.senab.photoview.PhotoViewAttacher;
 
 public class SingleImageScreen extends AppCompatActivity {
 
@@ -16,7 +17,10 @@ public class SingleImageScreen extends AppCompatActivity {
         ImageView image = new ImageView(this);
         image.setImageBitmap(LandmarkScreen.current_selected_bitmap);
         image.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT));
-        //image.setScaleType(ImageView.ScaleType.FIT_XY);
+
+        PhotoViewAttacher photoAttacher;
+        photoAttacher= new PhotoViewAttacher(image);
+        photoAttacher.update();
 
         LinearLayout layout = (LinearLayout) findViewById(R.id.single_image_screen_lyt_image);
         layout.addView(image);

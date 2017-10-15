@@ -193,10 +193,13 @@ public class JourneysScreen extends AppCompatActivity {
         View.OnClickListener listener = new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                JourneyHelper.createNewJourney(JourneysScreen.this);
-                displayJourneys();
-
-
+                JourneyHelper.createNewJourney(JourneysScreen.this,
+                        new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                displayJourneys();
+                            }
+                        });
             }
         };
 

@@ -100,7 +100,7 @@ public class DiscoverScreen extends AppCompatActivity {
             TextView txt = new TextView(this);
             txt.setText(postcard.landmark.replace('_', ' ').concat(" "));
             txt.setGravity(Gravity.CENTER);
-            txt.setTextSize(18);
+            txt.setTextSize(20);
             txt.setTypeface(Typeface.SERIF);
             LinearLayout.LayoutParams txtParams = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -121,8 +121,12 @@ public class DiscoverScreen extends AppCompatActivity {
             card.setRadius(20);
             card.setUseCompatPadding(true);
 
-            card.addView(img);
-            card.addView(txt);
+            LinearLayout cardLayout = new LinearLayout(this);
+            cardLayout.setOrientation(LinearLayout.VERTICAL);
+            cardLayout.addView(img);
+            cardLayout.addView(txt);
+            card.addView(cardLayout);
+
             card.setOnClickListener(createOnClickListener(postcard));
             layout.addView(card);
         }
