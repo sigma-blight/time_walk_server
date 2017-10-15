@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="project.chronos.timewalk.LandmarkScreen">
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:background="@color/commonWhite"
+        android:orientation="vertical"
+        android:weightSum="1000"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="68"
+            android:background="@color/commonWhite"
+            android:orientation="horizontal"
+            android:weightSum="100">
+
+            <TextView
+                android:id="@+id/landmark_screen_tv_title"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="90"
+                android:background="@color/commonWhite"
+                android:fontFamily="serif"
+                android:gravity="center"
+                android:text="Brisbane City Hall"
+                android:textAlignment="center"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <ImageButton
+                android:id="@+id/landmark_screen_btn_add"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="10"
+                android:background="@color/commonWhite"
+                app:srcCompat="@android:drawable/ic_menu_add" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2"
+            android:background="@color/colorPrimary" />
+
+        <android.support.v7.widget.CardView
+            android:id="@+id/landmark_screen_cv_image"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="350"
+            android:background="@color/commonWhite"
+            android:scrollbars="none"
+            app:cardBackgroundColor="@color/commonWhite"
+            app:cardCornerRadius="0dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="68"
+            android:background="@color/commonWhite"
+            android:orientation="horizontal"
+            android:weightSum="1000">
+
+            <Button
+                android:id="@+id/landmark_screen_tv_date_left"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="298"
+                android:background="@color/commonWhite"
+                android:gravity="center"
+                android:text="1874"
+                android:textSize="10sp" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"
+                android:background="@color/colorPrimary" />
+
+
+            <Button
+                android:id="@+id/landmark_screen_tv_date_main"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="400"
+                android:background="@color/commonWhite"
+                android:gravity="center"
+                android:text="1930"
+                android:textAlignment="center"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"
+                android:background="@color/colorPrimary" />
+
+            <Button
+                android:id="@+id/landmark_screen_tv_date_right"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="298"
+                android:background="@color/commonWhite"
+                android:gravity="center"
+                android:text="1893"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="2"
+            android:background="@color/colorPrimary" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="500"
+            android:background="@color/commonWhite"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="15dp">
+
+                <TextView
+                    android:id="@+id/landmark_screen_tv_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@color/commonWhite"
+                    android:fontFamily="monospace"
+                    android:text="TextView"
+                    android:textAlignment="textStart"
+                    android:textSize="18sp" />
+            </LinearLayout>
+        </ScrollView>
+
+
+    </LinearLayout>
+
+</android.support.constraint.ConstraintLayout>
