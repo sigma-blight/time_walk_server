@@ -115,7 +115,7 @@ public class LandmarkScreen extends AppCompatActivity {
             lhs.setText("");
             lhs.setOnClickListener(null);
         } else {
-            lhs.setText(images.get(currentImage - 1).name.split("-")[0]);
+            lhs.setText(images.get(currentImage - 1).name.split("_")[0]);
             class Listener implements View.OnClickListener {
 
                 @Override
@@ -133,7 +133,7 @@ public class LandmarkScreen extends AppCompatActivity {
             rhs.setOnClickListener(null);
         }
         else {
-            rhs.setText(images.get(currentImage + 1).name.split("-")[0]);
+            rhs.setText(images.get(currentImage + 1).name.split("_")[0]);
             class Listener implements View.OnClickListener {
 
                 @Override
